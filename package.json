@@ -1,5 +1,5 @@
 {
-  "name": "@HashemKhalifa/webpack-react-boilerplate",
+  "name": "SVG-path-coordinates",
   "version": "1.0.0",
   "description": "Boilerplate for react and webpack",
   "main": "index.js",
@@ -42,7 +42,7 @@
     ]
   },
   "repository": "https://github.com/HashemKhalifa/webpack-react-boilerplate",
-  "author": "HashemKhalifa",
+  "author": "annekagoss",
   "license": "ISC",
   "private": false,
   "engines": {
