@@ -1,0 +1,14 @@
+{
+    "extends": ["airbnb", "plugin:prettier/recommended", "prettier/react"],
+    "rules": {
+        "no-plusplus": "off",
+        "no-use-before-define": ["error", { "functions": false, "classes": false }],
+        "semicolons": false
+    },
+    "env": {
+        "es6": true,
+        "jest": true,
+        "browser": true,
+        "node": true
+    }
+}
