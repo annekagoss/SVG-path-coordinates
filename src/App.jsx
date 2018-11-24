@@ -6,7 +6,9 @@ import squiggle from 'images/squiggle';
 import squiggle3 from 'images/squiggle3';
 import squiggleLine from 'images/squiggle_line';
 
-const svg = ico1;
+const svg = squiggleLine;
+
+const SAMPLES = 100
 
 const RULE_TYPES = {
     'M': 'start',
@@ -112,7 +114,7 @@ function absBezierCoords(string, plotHeight) {
     const bezB = new Point(handleBx, handleBy)
     const endPoint = new Point(finalx, finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight)
+    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, SAMPLES)
 
     return {
         points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
@@ -128,7 +130,7 @@ function relBezierCoords(currentPos, string, plotHeight, graph) {
     const bezB = new Point(currentPos.x + handleBx, plotHeight - currentPos.y + handleBy)
     const endPoint = new Point(currentPos.x + finalx, plotHeight - currentPos.y + finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight)
+    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, SAMPLES)
     drawHandles(graph, bezierCurve)
 
     return {
@@ -151,7 +153,7 @@ function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph) {
     const bezB = new Point(newHandleBx, newHandleBy)
     const endPoint = new Point(currentPos.x + finalx, plotHeight - currentPos.y + finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight)
+    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, SAMPLES)
 
     drawHandles(graph, bezierCurve)
 
@@ -173,10 +175,41 @@ function lineCoords(line, plotHeight) {
     const y1 = plotHeight - matchCoord(line, 'y1', 'x2')
     const x2 = matchCoord(line, 'x2', 'y2')
     const y2 = plotHeight - matchCoord(line, 'y2', '/')
+
+    const startPoint = { x: x1, y: y1 }
+    const endPoint = { x: x2, y: y2 }
+
+    const interpolatedPoints = []
+    for (let i = 0; i < SAMPLES; i++) {
+        const t = i / SAMPLES
+        interpolatedPoints.push(lerpVectors(startPoint, endPoint, t))
+    }
+
+    console.log({ interpolatedPoints })
+
     return [
-        { x: x1, y: y1 },
-        { x: x2, y: y2 }
+        startPoint,
+        ...interpolatedPoints,
+        endPoint
     ]
+}
+
+function lerpVectors(a, b, t) {
+    return addVectors(scaleVector(a, t), scaleVector(b, 1 - t))
+}
+
+function scaleVector({ x, y }, scalar) {
+    return {
+        x: x * scalar,
+        y: y * scalar
+    }
+}
+
+function addVectors(a, b) {
+    return {
+        x: a.x + b.x,
+        y: a.y + b.y
+    }
 }
 
 class App extends Component {
@@ -207,6 +240,7 @@ class App extends Component {
     const bezierPoints = linesAndPathsCoordinates.map(coord => (new Point(coord.x, plotHeight - coord.y)))
     graph.drawCurveFromPoints(bezierPoints);
     const coordinates = formatPathString(linesAndPathsCoordinates)
+    console.log({ linesAndPathsCoordinates })
 
     this.setState({
         coordinates,

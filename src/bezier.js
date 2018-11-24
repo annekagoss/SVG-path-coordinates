@@ -39,7 +39,7 @@ export class Point {
 */
 
 export class BezierCurve {
-  constructor(points, plotHeight) {
+  constructor(points, plotHeight, samples) {
     this.plotHeight = plotHeight;
     if (points instanceof Point) {
       this.points = [];
@@ -56,7 +56,7 @@ export class BezierCurve {
 
     // Drawing points are the number of points that render the curve,
     // the more the number of drawing points, smoother the curve.
-    this.numDrawingPoints = 100;
+    this.numDrawingPoints = samples;
     this.drawingPoints = [];
 
     this.calculateDrawingPoints();
