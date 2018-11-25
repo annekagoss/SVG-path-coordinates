@@ -5,8 +5,12 @@ import ico1 from 'images/ico_1';
 import squiggle from 'images/squiggle';
 import squiggle3 from 'images/squiggle3';
 import squiggleLine from 'images/squiggle_line';
+import { icoAnim1, icoAnim2, icoAnim3, icoAnimContinuous } from 'images/ico_anim/ico_anim.js';
 
-const svg = squiggleLine;
+const svg = icoAnimContinuous
+
+// Set interpolate lines to true if sending a combination of lines and curves to an oscilloscope
+const INTERPOLATE_LINES = false
 
 const SAMPLES = 100
 
@@ -170,6 +174,30 @@ function pathCoords(path, plotHeight, graph) {
     return coordinatesFromRules(rules, plotHeight, graph)
 }
 
+function polygonCoords(polygon, plotHeight) {
+    const points = polygon.match('points=(.*)')[1].split(' ').map(point => {
+        return point.split(',').map(coord => {
+            return parseFloat(coord.replace(/"/g, ''))
+        })
+    }).filter(point => point.length === 2).map(point => ({ x: point[0], y: point[1] }))
+    const closedPoints = [...points, points[0]]
+
+    if (!INTERPOLATE_LINES) return closedPoints
+
+    const interpolatedPoints = []
+
+    for (let i = 0; i < closedPoints.length - 1; i ++ ) {
+        let startPoint = closedPoints[i]
+        let endPoint = closedPoints[i+1]
+
+        for (let j = 0; j < SAMPLES; j ++) {
+            const t = j / SAMPLES
+            interpolatedPoints.push(lerpVectors(startPoint, endPoint, t))
+        }
+    }
+    return interpolatedPoints
+}
+
 function lineCoords(line, plotHeight) {
     const x1 = matchCoord(line, 'x1', 'y1')
     const y1 = plotHeight - matchCoord(line, 'y1', 'x2')
@@ -179,13 +207,15 @@ function lineCoords(line, plotHeight) {
     const startPoint = { x: x1, y: y1 }
     const endPoint = { x: x2, y: y2 }
 
+    if (!INTERPOLATE_LINES) {
+        return [ startPoint, endPoint ]
+    }
+
     const interpolatedPoints = []
     for (let i = 0; i < SAMPLES; i++) {
         const t = i / SAMPLES
         interpolatedPoints.push(lerpVectors(startPoint, endPoint, t))
     }
-
-    console.log({ interpolatedPoints })
 
     return [
         startPoint,
@@ -198,7 +228,8 @@ function lerpVectors(a, b, t) {
     return addVectors(scaleVector(a, t), scaleVector(b, 1 - t))
 }
 
-function scaleVector({ x, y }, scalar) {
+function scaleVector(vector, scalar) {
+    const { x, y } = vector
     return {
         x: x * scalar,
         y: y * scalar
@@ -228,19 +259,22 @@ class App extends Component {
 
       const graph = new Graph('graph');
 
-      const linesAndPaths = svg.match(/<(line|path)(.*)\/>/g)
+      const tags = svg.match(/<(line|path|polygon)(.*)\/>/g)
 
-      const linesAndPathsCoordinates = linesAndPaths.map(lineOrPath => {
-          if (lineOrPath.match('path')) {
-              return pathCoords(lineOrPath, plotHeight, graph)
+      console.log(tags[0])
+
+      const linesAndPathsCoordinates = tags.map(tag => {
+          if (tag.match('path')) {
+              return pathCoords(tag, plotHeight, graph)
+          } else if (tag.match('polygon')) {
+              return polygonCoords(tag, plotHeight)
           }
-          return lineCoords(lineOrPath, plotHeight)
+          return lineCoords(tag, plotHeight)
       }).flat()
 
     const bezierPoints = linesAndPathsCoordinates.map(coord => (new Point(coord.x, plotHeight - coord.y)))
     graph.drawCurveFromPoints(bezierPoints);
     const coordinates = formatPathString(linesAndPathsCoordinates)
-    console.log({ linesAndPathsCoordinates })
 
     this.setState({
         coordinates,
