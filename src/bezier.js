@@ -108,11 +108,12 @@ function C(n, k) {
 */
 export class Graph {
   constructor(id) {
-    this.el = document.getElementById(id);
+    this.id = id
   }
 
-  drawLine(point1, point2, stroke = 2, color = '#000000') {
-    this.el.insertAdjacentHTML(
+  drawLine(point1, point2, id, stroke = 2, color = '#000000') {
+    const el = document.getElementById(this.id)
+    el && el.insertAdjacentHTML(
       'beforeend',
       `<line x1="${point1.x}" y1="${point1.y}" x2="${point2.x}" y2="${
         point2.y
@@ -120,9 +121,9 @@ export class Graph {
     );
   }
 
-  drawCurveFromPoints(points) {
+  drawCurveFromPoints(points, id) {
     for (let i = 0; i < points.length; i++) {
-      if (i + 1 < points.length) this.drawLine(points[i], points[i + 1]);
+      if (i + 1 < points.length) this.drawLine(points[i], points[i + 1], id);
     }
   }
 }

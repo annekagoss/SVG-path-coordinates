@@ -7,7 +7,12 @@ import squiggle3 from 'images/squiggle3';
 import squiggleLine from 'images/squiggle_line';
 import { icoAnim1, icoAnim2, icoAnim3, icoAnimContinuous } from 'images/ico_anim/ico_anim.js';
 
-const svg = icoAnimContinuous
+const SVG = icoAnim1
+const ANIM_FRAMES = [
+    icoAnim1,
+    icoAnim2,
+    icoAnim3
+]
 
 // Set interpolate lines to true if sending a combination of lines and curves to an oscilloscope
 const INTERPOLATE_LINES = false
@@ -43,11 +48,12 @@ function formatPathString(coords) {
 
 
 function makeTextFile(text) {
-    const data = new Blob([text], {type: 'text/plain'});
+    const string = formatPathString(text)
+    const data = new Blob([string], {type: 'text/plain'});
     return window.URL.createObjectURL(data);
 }
 
-function coordinatesFromRules(rules, plotHeight, graph) {
+function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
     let currentPos = { x: null, y: null }
     let lastBezier = null
     const coordinates = []
@@ -69,7 +75,7 @@ function coordinatesFromRules(rules, plotHeight, graph) {
                     points: absBezPoints,
                     bezB: absBezB,
                     endPoint: absEndPoint
-                } = absBezierCoords(rest, plotHeight)
+                } = absBezierCoords(rest, plotHeight, numSamples)
                 currentPos = absEndPoint
                 lastBezier = absBezB || lastBezier
                 coordinates.push(...absBezPoints)
@@ -111,14 +117,14 @@ function ruleToCoords(string) {
     return string.replace(/-/g, ',-').split(',').filter(coord => coord !== '').map(coord => parseFloat(coord))
 }
 
-function absBezierCoords(string, plotHeight) {
+function absBezierCoords(string, plotHeight, numSamples) {
     const [ handleAx, handleAy, handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
 
     const bezA = new Point(handleAx, handleAy)
     const bezB = new Point(handleBx, handleBy)
     const endPoint = new Point(finalx, finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, SAMPLES)
+    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
 
     return {
         points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
@@ -127,14 +133,14 @@ function absBezierCoords(string, plotHeight) {
     }
 }
 
-function relBezierCoords(currentPos, string, plotHeight, graph) {
+function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
     const [ handleAx, handleAy, handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
 
     const bezA = new Point(currentPos.x + handleAx, plotHeight - currentPos.y + handleAy)
     const bezB = new Point(currentPos.x + handleBx, plotHeight - currentPos.y + handleBy)
     const endPoint = new Point(currentPos.x + finalx, plotHeight - currentPos.y + finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, SAMPLES)
+    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
     drawHandles(graph, bezierCurve)
 
     return {
@@ -144,7 +150,7 @@ function relBezierCoords(currentPos, string, plotHeight, graph) {
     }
 }
 
-function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph) {
+function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSamples) {
     const [ handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
 
     const newHandleBx = currentPos.x + (currentPos.x - lastBezier.x)
@@ -157,7 +163,7 @@ function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph) {
     const bezB = new Point(newHandleBx, newHandleBy)
     const endPoint = new Point(currentPos.x + finalx, plotHeight - currentPos.y + finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, SAMPLES)
+    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
 
     drawHandles(graph, bezierCurve)
 
@@ -168,13 +174,13 @@ function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph) {
     }
 }
 
-function pathCoords(path, plotHeight, graph) {
+function pathCoords(path, plotHeight, graph, numSamples) {
     const instructions = path.match('d=(.*)')[1]
     const rules = instructions.split(/(?=[A-Za-z])/)
-    return coordinatesFromRules(rules, plotHeight, graph)
+    return coordinatesFromRules(rules, plotHeight, graph, numSamples)
 }
 
-function polygonCoords(polygon, plotHeight) {
+function polygonCoords(polygon, plotHeight, numSamples) {
     const points = polygon.match('points=(.*)')[1].split(' ').map(point => {
         return point.split(',').map(coord => {
             return parseFloat(coord.replace(/"/g, ''))
@@ -190,15 +196,15 @@ function polygonCoords(polygon, plotHeight) {
         let startPoint = closedPoints[i]
         let endPoint = closedPoints[i+1]
 
-        for (let j = 0; j < SAMPLES; j ++) {
-            const t = j / SAMPLES
+        for (let j = 0; j < numSamples; j ++) {
+            const t = j / numSamples
             interpolatedPoints.push(lerpVectors(startPoint, endPoint, t))
         }
     }
     return interpolatedPoints
 }
 
-function lineCoords(line, plotHeight) {
+function lineCoords(line, plotHeight, numSamples) {
     const x1 = matchCoord(line, 'x1', 'y1')
     const y1 = plotHeight - matchCoord(line, 'y1', 'x2')
     const x2 = matchCoord(line, 'x2', 'y2')
@@ -212,8 +218,8 @@ function lineCoords(line, plotHeight) {
     }
 
     const interpolatedPoints = []
-    for (let i = 0; i < SAMPLES; i++) {
-        const t = i / SAMPLES
+    for (let i = 0; i < numSamples; i++) {
+        const t = i / numSamples
         interpolatedPoints.push(lerpVectors(startPoint, endPoint, t))
     }
 
@@ -243,54 +249,86 @@ function addVectors(a, b) {
     }
 }
 
+function numPaths(svg) {
+    return svg.match(/<(line|path|polygon)(.*)\/>/g).length
+}
+
+function extendCoords(coords, minSamples) {
+    if (coords.length < minSamples) {
+        const extension = new Array(minSamples - coords.length).fill(coords[coords.length-1])
+        return coords.concat(extension)
+    }
+    return coords.splice(0, minSamples)
+}
+
 class App extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-        plotWidth: 200,
-        plotHeight: 200
-    };
   }
 
+  state = {
+      animFrames: []
+  };
+
   componentDidMount() {
+      if (ANIM_FRAMES.length > 0) {
+          this.parseFrames(ANIM_FRAMES, SAMPLES)
+          return
+      }
+      this.setState({
+          animFrames: [ this.parseSVG(SVG, SAMPLES) ]
+      })
+  }
+
+  parseFrames(animFrames, samples) {
+      const totalSamples = Math.max(...animFrames.map(animFrame => (numPaths(animFrame)))) * samples
+      const newFrames = []
+      animFrames.forEach((animFrame, i) => {
+          const paths = numPaths(animFrame)
+          const samplesPerPath = Math.floor(totalSamples / paths)
+          newFrames.push(this.parseSVG(animFrame, samplesPerPath, totalSamples, i))
+      })
+      this.setState({
+          animFrames: newFrames
+      })
+  }
+
+  parseSVG(svg, numSamples, minSamples, frameNum = 0) {
       const plotSize = svg.match('viewBox="(.*)" style')[1]
       const plotWidth = parseFloat(plotSize.split(' ')[2])
       const plotHeight = parseFloat(plotSize.split(' ')[3])
-
-      const graph = new Graph('graph');
-
       const tags = svg.match(/<(line|path|polygon)(.*)\/>/g)
 
-      console.log(tags[0])
-
-      const linesAndPathsCoordinates = tags.map(tag => {
+      const coordinates = tags.map(tag => {
           if (tag.match('path')) {
-              return pathCoords(tag, plotHeight, graph)
+              return pathCoords(tag, plotHeight, graph, numSamples)
           } else if (tag.match('polygon')) {
-              return polygonCoords(tag, plotHeight)
+              return polygonCoords(tag, plotHeight, numSamples)
           }
-          return lineCoords(tag, plotHeight)
+          return lineCoords(tag, plotHeight, numSamples)
       }).flat()
+    const extendedCoords = minSamples ? extendCoords(coordinates, minSamples) : coordinates
+    return { frameNum, coordinates: extendedCoords, plotWidth, plotHeight }
+  }
 
-    const bezierPoints = linesAndPathsCoordinates.map(coord => (new Point(coord.x, plotHeight - coord.y)))
-    graph.drawCurveFromPoints(bezierPoints);
-    const coordinates = formatPathString(linesAndPathsCoordinates)
-
-    this.setState({
-        coordinates,
-        plotWidth,
-        plotHeight
-     })
+  drawPreview(animFrame) {
+      setTimeout(() => {
+          const graph = new Graph(`graph-${animFrame.frameNum}`)
+          const bezierPoints = animFrame.coordinates.map(coord => (new Point(coord.x, animFrame.plotHeight - coord.y)))
+          graph.drawCurveFromPoints(bezierPoints, `graph-${animFrame.frameNum}`)
+      },0)
   }
 
   render() {
-    const { coordinates, plotWidth, plotHeight } = this.state
+    const { animFrames } = this.state
     return (
         <div>
-            {coordinates &&
-                <a download='coords.txt' href={makeTextFile(coordinates)}>download coordinates</a>
-            }
-            <svg width={`${plotWidth}px`} height={`${plotHeight}px`} id="graph"></svg>
+            {animFrames.map((animFrame, i) => (
+                <div key={i}>
+                    <a download={`frame_${i}.txt`} href={makeTextFile(animFrame.coordinates, i)}>download coordinates</a>
+                    <svg onLoad={this.drawPreview(animFrame)} width={`${animFrame.plotWidth}px`} height={`${animFrame.plotHeight}px`} id={`graph-${animFrame.frameNum}`}></svg>
+                </div>
+            ))}
         </div>
     )
   }
