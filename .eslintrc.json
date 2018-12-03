@@ -1,9 +1,15 @@
 {
-    "extends": ["airbnb", "plugin:prettier/recommended", "prettier/react"],
+    "extends": ["airbnb"],
     "rules": {
         "no-plusplus": "off",
         "no-use-before-define": ["error", { "functions": false, "classes": false }],
-        "semicolons": false
+        "semicolons": false,
+        "semi": 0,
+        "indent": ["off", "tab"],
+        "no-tabs": "off",
+        "no-mixed-operators": "off",
+        "camelcase": "off",
+        "arrow-parens": "off"
     },
     "env": {
         "es6": true,

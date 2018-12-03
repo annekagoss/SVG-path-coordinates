@@ -1,23 +1,22 @@
-import React, { Component } from 'react';
-import { hot } from 'react-hot-loader';
-import { Point, BezierCurve, Graph, drawHandles } from 'bezier';
-import ico1 from 'images/ico_1';
-import squiggle from 'images/squiggle';
-import squiggle3 from 'images/squiggle3';
-import squiggleLine from 'images/squiggle_line';
-import { icoAnim1, icoAnim2, icoAnim3, icoAnimContinuous } from 'images/ico_anim/ico_anim.js';
+import React, { Component } from 'react'
+import { hot } from 'react-hot-loader'
+import { Point, BezierCurve, Graph, drawHandles } from 'bezier'
+import ico1 from 'images/ico_1'
+import squiggle from 'images/squiggle'
+import squiggle3 from 'images/squiggle3'
+import squiggleLine from 'images/squiggle_line'
+import { icoAnim1, icoAnim2, icoAnim3, icoAnimContinuous } from 'images/ico_anim/ico_anim.js'
+import { c4d_ico_1, c4d_ico_2 } from 'images/c4d_ico_anim'
 
 const SVG = icoAnim1
 const ANIM_FRAMES = [
-    icoAnim1,
-    icoAnim2,
-    icoAnim3
+    c4d_ico_1
 ]
 
 // Set interpolate lines to true if sending a combination of lines and curves to an oscilloscope
-const INTERPOLATE_LINES = false
+const INTERPOLATE_LINES = true
 
-const SAMPLES = 100
+const SAMPLES = 150
 
 const RULE_TYPES = {
     'M': 'start',
@@ -45,7 +44,6 @@ function formatPathString(coords) {
         return result + i + ', ' + x + ' ' + y + ';\n'
     }, '')
 }
-
 
 function makeTextFile(text) {
     const string = formatPathString(text)
@@ -219,15 +217,11 @@ function lineCoords(line, plotHeight, numSamples) {
 
     const interpolatedPoints = []
     for (let i = 0; i < numSamples; i++) {
-        const t = i / numSamples
+        const t = 1 - (i / numSamples)
         interpolatedPoints.push(lerpVectors(startPoint, endPoint, t))
     }
 
-    return [
-        startPoint,
-        ...interpolatedPoints,
-        endPoint
-    ]
+    return interpolatedPoints
 }
 
 function lerpVectors(a, b, t) {
@@ -249,6 +243,21 @@ function addVectors(a, b) {
     }
 }
 
+function subtractVectors(a, b) {
+    return {
+        x: a.x - b.x,
+        y: a.y - b.y
+    }
+}
+
+function vectorLength({ x, y}) {
+    return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
+}
+
+function vectorDistance(a, b) {
+    return vectorLength(subtractVectors(a, b))
+}
+
 function numPaths(svg) {
     return svg.match(/<(line|path|polygon)(.*)\/>/g).length
 }
@@ -259,6 +268,33 @@ function extendCoords(coords, minSamples) {
         return coords.concat(extension)
     }
     return coords.splice(0, minSamples)
+}
+
+function sortByVicinity(coordinates) {
+    let toSort = coordinates.map((list, i) => ({ key: i, coordinates: list }))
+    const keyedCoordinates = [...toSort]
+    const sorted = []
+
+    keyedCoordinates.forEach(list => {
+        if (sorted.length === 0) {
+            sorted.push(list)
+            return
+        }
+        const closestList = findClosestList(list.coordinates[list.coordinates.length-1], toSort)
+        sorted.push(closestList)
+        toSort = toSort.filter(list => (list.key !== closestList.key))
+    })
+
+    return [ ...sorted, ...toSort ].map(item => (item.coordinates)).flat()
+}
+
+function findClosestList(lastPoint, lists) {
+    const weightedLists = lists.reduce((result, list) => {
+        const distance = vectorDistance(list.coordinates[0], lastPoint)
+        result.push({ ...list, distance })
+        return result
+    }, [])
+    return weightedLists.sort((a,b) => (a.distance - b.distance))[0]
 }
 
 class App extends Component {
@@ -281,11 +317,11 @@ class App extends Component {
   }
 
   parseFrames(animFrames, samples) {
-      const totalSamples = Math.max(...animFrames.map(animFrame => (numPaths(animFrame)))) * samples
+      const totalSamples = INTERPOLATE_LINES ? Math.max(...animFrames.map(animFrame => (numPaths(animFrame)))) * samples : null
       const newFrames = []
       animFrames.forEach((animFrame, i) => {
           const paths = numPaths(animFrame)
-          const samplesPerPath = Math.floor(totalSamples / paths)
+          const samplesPerPath = INTERPOLATE_LINES ? Math.floor(totalSamples / paths) : samples
           newFrames.push(this.parseSVG(animFrame, samplesPerPath, totalSamples, i))
       })
       this.setState({
@@ -306,9 +342,9 @@ class App extends Component {
               return polygonCoords(tag, plotHeight, numSamples)
           }
           return lineCoords(tag, plotHeight, numSamples)
-      }).flat()
-    const extendedCoords = minSamples ? extendCoords(coordinates, minSamples) : coordinates
-    return { frameNum, coordinates: extendedCoords, plotWidth, plotHeight }
+      })
+      const sortedCoordinates = sortByVicinity(coordinates)
+      return { frameNum, coordinates: sortedCoordinates, plotWidth, plotHeight }
   }
 
   drawPreview(animFrame) {

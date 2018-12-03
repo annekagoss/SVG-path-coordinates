@@ -1,7 +1,7 @@
 {
   "parser": "babel-eslint",
-  "plugins": ["react", "jest", "prettier"],
-  "extends": ["airbnb", "plugin:prettier/recommended", "prettier/react"],
+  "plugins": ["react", "jest"],
+  "extends": ["airbnb"],
   "globals": {
     "React": true,
     "document": true,
@@ -67,6 +67,7 @@
     "import/no-extraneous-dependencies": 0,
     "import/extensions": 0,
     "babel/object-curly-spacing": 0,
+    "semi": "never"
   },
   "parserOptions": {
     "ecmaVersion": 2017
