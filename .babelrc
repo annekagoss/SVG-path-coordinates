@@ -3,6 +3,7 @@
   "plugins": [
     "@babel/plugin-transform-runtime",
     "react-hot-loader/babel",
+    "react-css-modules",
 
     // Stage 2 https://github.com/babel/babel/tree/master/packages/babel-preset-stage-2
     ["@babel/plugin-proposal-decorators", { "legacy": true }],

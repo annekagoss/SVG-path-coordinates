@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import { hot } from 'react-hot-loader'
+import DropZone from 'components/dropzone'
 import { Point, BezierCurve, Graph, drawHandles } from 'bezier'
 import ico1 from 'images/ico_1'
 import squiggle from 'images/squiggle'
@@ -359,6 +360,7 @@ class App extends Component {
     const { animFrames } = this.state
     return (
         <div>
+            <DropZone />
             {animFrames.map((animFrame, i) => (
                 <div key={i}>
                     <a download={`frame_${i}.txt`} href={makeTextFile(animFrame.coordinates, i)}>download coordinates</a>
