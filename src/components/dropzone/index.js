@@ -1,11 +1,12 @@
 import React, { Component } from 'react'
 import classNames from 'classnames'
 import Dropzone from 'react-dropzone'
-import styles from './index.css'
+import style from './index.css'
 
 export default class DropZone extends Component {
   onDrop = (acceptedFiles, rejectedFiles) => {
-    console.log({ acceptedFiles, rejectedFiles })
+    rejectedFiles.length > 0 && console.error(new Error(`${rejectedFiles.length} frames were rejected`))
+    acceptedFiles.length > 0 && this.props.onFramesUpload(acceptedFiles)
   }
 
   render() {
@@ -15,14 +16,12 @@ export default class DropZone extends Component {
           return (
             <div
               {...getRootProps()}
-              className={classNames(styles.dropzone, {'dropzone--isActive': isDragActive})}
+              className={classNames(style.dropzone, {'dropzone--isActive': isDragActive})}
             >
               <input {...getInputProps()} />
-              {
-                isDragActive ?
-                  <p>Drop files here...</p> :
-                  <p>Try dropping some files here, or click to select files to upload.</p>
-              }
+              <div className={style.label}>
+                <div>Drop SVG frames here.</div>
+              </div>
             </div>
           )
         }}

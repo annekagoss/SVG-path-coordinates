@@ -1,4 +1,20 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto');
+
 .dropzone {
-  height: 400px;
-  background-color: rgb(220, 220, 220);
+  max-width: 400px;
+  height: 100px;
+  margin: 0 auto;
+  background-color: rgb(240, 240, 240);
+}
+
+.label {
+  height: 100%;
+  font-family: 'Roboto', serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-transform: uppercase;
+  font-size: 14px;
+  color: #b7b7b7;
+  letter-spacing: .3px;
 }

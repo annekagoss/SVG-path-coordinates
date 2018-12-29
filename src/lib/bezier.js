@@ -127,6 +127,12 @@ export class Graph {
             if (i + 1 < points.length) this.drawLine(points[i], points[i + 1], id)
         }
     }
+
+    clear() {
+      const el = document.getElementById(this.id)
+      if (!el) return
+      el.innerHTML = ''
+    }
 }
 
 // Utilty functions
