@@ -5,14 +5,14 @@ function formatLineString(coords) {
     }, '')
 }
 
-function formatPathString(coords) {
+function formatPathString(coords, frameNum) {
     return coords.reduce((result, { x, y }, i) => {
-        return result + i + ', ' + x + ' ' + y + ';\n'
+        return result + (coords.length*frameNum+i) + ', ' + x + ' ' + y + ';\n'
     }, '')
 }
 
-export function makeTextFile(text) {
-    const string = formatPathString(text)
-    const data = new Blob([string], {type: 'text/plain'});
+export function makeTextFile(frames) {
+    const combinedText = frames.map((frame, i) => (formatPathString(frame.coordinates, i)))
+    const data = new Blob(combinedText, {type: 'text/plain'});
     return window.URL.createObjectURL(data);
 }

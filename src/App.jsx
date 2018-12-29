@@ -15,12 +15,17 @@ class App extends Component {
   }
 
   state = {
-      animFrames: []
+      animFrames: [],
+      width: 200,
+      height: 200
   }
 
-  loadFrames(animFrames) {
+  loadFrames(frames) {
+      const animFrames = parseFrames(frames, SAMPLES, INTERPOLATE_LINES)
       this.setState({
-          animFrames: parseFrames(animFrames, SAMPLES, INTERPOLATE_LINES)
+          animFrames,
+          width: animFrames[0].plotWidth,
+          height: animFrames[0].plotHeight
       })
   }
 
@@ -75,7 +80,7 @@ class App extends Component {
             <DropZone onFramesUpload={this.onFramesUpload}/>
             { animFrames.length > 0 && (
               <div>
-                <a download={`frame_${0}.txt`} href={makeTextFile(animFrames[0].coordinates, 0)}>download coordinates</a>
+                <a download={`frame_${0}.txt`} href={makeTextFile(animFrames)}>download coordinates</a>
                 <svg onLoad={this.startAnimation(animFrames)} width={`${animFrames[0].plotWidth}px`} height={`${animFrames[0].plotHeight}px`} id='graph-0'></svg>
               </div>
             )}
