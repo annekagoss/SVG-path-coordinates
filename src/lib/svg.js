@@ -34,7 +34,7 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
 
         switch (type) {
             case 'start':
-                const startCoords = stringToCoords(rest)
+                const startCoords = stringToCoords(rest, plotHeight)
                 currentPos = startCoords
                 coordinates.push(startCoords)
                 return
@@ -76,9 +76,9 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
     return coordinates
 }
 
-function stringToCoords(string) {
+function stringToCoords(string, height) {
     const [x, y] = string.split(',').map(coord => (parseFloat(coord)))
-    return { x, y: 205 - y } // replace with SVG height
+    return { x, y: height - y } // replace with SVG height
 }
 
 function ruleToCoords(string) {
@@ -194,7 +194,7 @@ function lineCoords(line, plotHeight, numSamples, interpolate) {
     return interpolatedPoints
 }
 
-function numPaths(svg) {
+export function numPaths(svg) {
     const paths = svg.match(/<(line|path|polygon)(.*)\/>/g)
     return paths ? paths.length : 0
 }
@@ -234,19 +234,8 @@ function findClosestList(lastPoint, lists) {
     return weightedLists.sort((a,b) => (a.distance - b.distance))[0]
 }
 
-export function parseFrames(animFrames, samples, interpolate) {
-  const totalSamples = interpolate ? Math.max(...animFrames.map(animFrame => (numPaths(animFrame)))) * samples : null
-  const newFrames = []
-  animFrames.forEach((animFrame, i) => {
-      console.log(`reading frame ${i}...`)
-      const paths = numPaths(animFrame)
-      const samplesPerPath = interpolate ? Math.floor(totalSamples / paths) : samples
-      newFrames.push(parseSVG(animFrame, samplesPerPath, totalSamples, i, interpolate))
-  })
-  return newFrames
-}
 
-function parseSVG(svg, numSamples, minSamples, frameNum = 0, interpolate) {
+export function parseSVG(svg, numSamples, minSamples, frameNum = 0, interpolate) {
     const plotSize = svg.match('viewBox="(.*)" style')[1]
     const plotWidth = parseFloat(plotSize.split(' ')[2])
     const plotHeight = parseFloat(plotSize.split(' ')[3])
