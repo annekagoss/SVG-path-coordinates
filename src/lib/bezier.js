@@ -111,7 +111,7 @@ export class Graph {
         this.id = id
     }
 
-    drawLine(point1, point2, id, stroke = 2, color = '#000000') {
+    drawLine(point1, point2, stroke = .5, color = '#000000') {
         const el = document.getElementById(this.id)
         if (!el) return
         el.insertAdjacentHTML(
@@ -122,9 +122,18 @@ export class Graph {
         )
     }
 
-    drawCurveFromPoints(points, id) {
+    drawPoint(point) {
+      const el = document.getElementById(this.id)
+      if (!el) return
+      el.insertAdjacentHTML(
+          'beforeend',
+          `<circle cx="${point.x}" cy="${point.y}" r="5" fill="#000" />`,
+      )
+    }
+
+    drawCurveFromPoints(points) {
         for (let i = 0; i < points.length; i++) {
-            if (i + 1 < points.length) this.drawLine(points[i], points[i + 1], id)
+            if (i + 1 < points.length) this.drawLine(points[i], points[i + 1])
         }
     }
 
@@ -139,13 +148,13 @@ export class Graph {
 
 export function drawHandles(graph, curve) {
     if (curve.points.length === 1) {
-        curve.points[0].mark()
+        graph.drawPoint(curve.points[0])
         return
     }
     for (let i = 1; i < curve.points.length; i++) {
         if (i === 1 || i === curve.points.length - 1) {
-            curve.points[i - 1].mark()
-            curve.points[i].mark()
+            graph.drawPoint(curve.points[i - 1])
+            graph.drawPoint(curve.points[i])
         }
         graph.drawLine(
             curve.points[i - 1],
@@ -155,6 +164,6 @@ export function drawHandles(graph, curve) {
         )
     }
     if (curve.points.length === 1) {
-        curve.points[0].mark()
+        graph.drawPoint(curve.points[0])
     }
 }

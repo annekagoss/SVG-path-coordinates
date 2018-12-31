@@ -7,6 +7,12 @@ import {
   vectorDistance
 } from './math.js'
 
+import {
+  Point,
+  BezierCurve,
+  drawHandles
+} from './bezier.js'
+
 const RULE_TYPES = {
     'M': 'start',
     'C': 'absolute bezier',
@@ -17,7 +23,7 @@ const RULE_TYPES = {
 }
 
 function matchCoord(line, first, last) {
-    const match = line.match(`${first}=(.*)${last}`)
+    const match = line.match(`${first}=((.|\n)*)${last}`)
     return match && parseFloat(match[1].split('"').join(''))
 }
 
@@ -34,9 +40,7 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
 
         switch (type) {
             case 'start':
-                const startCoords = stringToCoords(rest, plotHeight)
-                currentPos = startCoords
-                coordinates.push(startCoords)
+                currentPos = stringToCoords(rest)
                 return
             case 'absolute bezier':
                 const {
@@ -44,6 +48,7 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
                     bezB: absBezB,
                     endPoint: absEndPoint
                 } = absBezierCoords(rest, plotHeight, numSamples)
+
                 currentPos = absEndPoint
                 lastBezier = absBezB || lastBezier
                 coordinates.push(...absBezPoints)
@@ -53,7 +58,7 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
                     points: relBezPoints,
                     endPoint: relEndPoint,
                     bezB: relBezB
-                } = relBezierCoords(currentPos, rest, plotHeight, graph)
+                } = relBezierCoords(currentPos, rest, plotHeight, graph, numSamples)
                 currentPos = relEndPoint
                 lastBezier = relBezB || lastBezier
                 coordinates.push(...relBezPoints)
@@ -63,10 +68,13 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
                     points: sBezPoints,
                     endPoint: sEndPoint,
                     bezB: sBezB
-                } = sBezierCoords(currentPos, lastBezier, rest, plotHeight, graph)
+                } = sBezierCoords(currentPos, lastBezier, rest, plotHeight, graph, numSamples)
                 currentPos = sBezPoints[sBezPoints.length-1]
                 lastBezier = sBezB || lastBezier
                 coordinates.push(...sBezPoints)
+                return
+            case 'end':
+                coordinates.push(coordinates[0])
                 return
             default:
                 break
@@ -78,7 +86,11 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
 
 function stringToCoords(string, height) {
     const [x, y] = string.split(',').map(coord => (parseFloat(coord)))
-    return { x, y: height - y } // replace with SVG height
+    return { x, y }
+}
+
+function invertY({ x, y }, height) {
+  return { x, y: height - y }
 }
 
 function ruleToCoords(string) {
@@ -104,12 +116,11 @@ function absBezierCoords(string, plotHeight, numSamples) {
 function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
     const [ handleAx, handleAy, handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
 
-    const bezA = new Point(currentPos.x + handleAx, plotHeight - currentPos.y + handleAy)
-    const bezB = new Point(currentPos.x + handleBx, plotHeight - currentPos.y + handleBy)
-    const endPoint = new Point(currentPos.x + finalx, plotHeight - currentPos.y + finaly)
+    const bezA = new Point(currentPos.x + handleAx, currentPos.y + handleAy)
+    const bezB = new Point(currentPos.x + handleBx, currentPos.y + handleBy)
+    const endPoint = new Point(currentPos.x + finalx, currentPos.y + finaly)
 
     const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
-    drawHandles(graph, bezierCurve)
 
     return {
         points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
@@ -129,11 +140,9 @@ function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSam
 
     const bezA = new Point(handleAx, handleAy)
     const bezB = new Point(newHandleBx, newHandleBy)
-    const endPoint = new Point(currentPos.x + finalx, plotHeight - currentPos.y + finaly)
+    const endPoint = new Point(currentPos.x + finalx, currentPos.y + finaly)
 
     const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
-
-    drawHandles(graph, bezierCurve)
 
     return {
         points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
@@ -143,13 +152,13 @@ function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSam
 }
 
 function pathCoords(path, plotHeight, graph, numSamples) {
-    const instructions = path.match('d=(.*)')[1]
+    const instructions = path.match('d=((.|\n)*)')[1]
     const rules = instructions.split(/(?=[A-Za-z])/)
     return coordinatesFromRules(rules, plotHeight, graph, numSamples)
 }
 
 function polygonCoords(polygon, plotHeight, numSamples, interpolate) {
-    const points = polygon.match('points=(.*)')[1].split(' ').map(point => {
+    const points = polygon.match('points=((.|\n)*)')[1].split(' ').map(point => {
         return point.split(',').map(coord => {
             return parseFloat(coord.replace(/"/g, ''))
         })
@@ -195,7 +204,7 @@ function lineCoords(line, plotHeight, numSamples, interpolate) {
 }
 
 export function numPaths(svg) {
-    const paths = svg.match(/<(line|path|polygon)(.*)\/>/g)
+    const paths = svg.match(/<(line|path|polygon)((.|\n)*)\/>/g)
     return paths ? paths.length : 0
 }
 
@@ -235,11 +244,12 @@ function findClosestList(lastPoint, lists) {
 }
 
 
-export function parseSVG(svg, numSamples, minSamples, frameNum = 0, interpolate) {
-    const plotSize = svg.match('viewBox="(.*)" style')[1]
+export function parseSVG(options) {
+    const { svg, numSamples, minSamples, frameNum = 0, interpolate, graph } = options
+    const plotSize = svg.match('viewBox="((.|\n)*)" style')[1]
     const plotWidth = parseFloat(plotSize.split(' ')[2])
     const plotHeight = parseFloat(plotSize.split(' ')[3])
-    const tags = svg.match(/<(line|path|polygon)(.*)\/>/g)
+    const tags = svg.match(/<(line|path|polygon)((.|\n)*)\/>/g)
 
     const coordinates = tags.map(tag => {
         if (tag.match('path')) {
