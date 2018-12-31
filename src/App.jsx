@@ -8,7 +8,7 @@ import { makeTextFile } from 'lib/output'
 import style from './styles.css'
 
 const INTERPOLATE_LINES = true
-const SAMPLES = 1000
+const SAMPLES = 200
 let FILE_CACHE = []
 
 class App extends Component {
