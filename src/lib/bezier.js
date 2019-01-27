@@ -112,6 +112,7 @@ export class Graph {
     }
 
     drawLine(point1, point2, stroke = .5, color = '#000000') {
+      if (Number.isNaN(point1.y) || Number.isNaN(point2.y)) return
         const el = document.getElementById(this.id)
         if (!el) return
         el.insertAdjacentHTML(

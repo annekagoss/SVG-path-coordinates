@@ -16,9 +16,12 @@ import {
 const RULE_TYPES = {
     'M': 'start',
     'C': 'absolute bezier',
-    's': 's bezier',
     'c': 'relative bezier',
+    's': 'relative s bezier',
+    'S': 'absolute s bezier',
     'L': 'absolute line',
+    'l': 'relative line',
+    'h': 'relative horizontal line',
     'z': 'end'
 }
 
@@ -27,7 +30,7 @@ function matchCoord(line, first, last) {
     return match && parseFloat(match[1].split('"').join(''))
 }
 
-function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
+function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) {
     let currentPos = { x: null, y: null }
     let lastBezier = null
     const coordinates = []
@@ -36,11 +39,54 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
         if (rule.length < 3) return
         const first = rule[0]
         const [ foo, rest ] = rule.split(first)
-        const type = RULE_TYPES[first] || 'end';
+        const type = RULE_TYPES[first];
 
+
+        console.log({ rule, type })
+        // debugger
         switch (type) {
             case 'start':
-                currentPos = stringToCoords(rest)
+                const startCoords = stringToCoords(rest)
+                currentPos = {
+                  x: startCoords.x,
+                  y: startCoords.y
+                }
+                // lastBezier = {
+                //   x: startCoords.x,
+                //   y: plotHeight - startCoords.y
+                // }
+                coordinates.push({
+                  x: startCoords.x,
+                  y: plotHeight - startCoords.y
+                })
+                return
+            case 'absolute line':
+                const point = stringToCoords(rest)
+                currentPos = {
+                  x: point.x,
+                  y: point.y
+                }
+                // console.log({ type, currentPos })
+                coordinates.push({
+                  x: point.x,
+                  y: plotHeight - point.y
+                })
+                return
+            case 'relative line':
+                const relLinePoints = relLineCoords(currentPos, rest, plotHeight)
+                currentPos = relLinePoints[1]
+                // console.log({ type, currentPos })
+                coordinates.concat(relLinePoints)
+                return
+            case 'relative horizontal line':
+                // console.log({ type, rule })
+                // debugger
+                const { x, y } = relHorizontalLineCoords(currentPos, rest, plotHeight)
+                currentPos = {
+                  x,
+                  y: plotHeight - y
+                }
+                coordinates.push({ x, y })
                 return
             case 'absolute bezier':
                 const {
@@ -48,40 +94,61 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples) {
                     bezB: absBezB,
                     endPoint: absEndPoint
                 } = absBezierCoords(rest, plotHeight, numSamples)
-
                 currentPos = absEndPoint
+                // console.log({ type, currentPos })
                 lastBezier = absBezB || lastBezier
                 coordinates.push(...absBezPoints)
                 return
             case 'relative bezier':
+            // debugger
                 const {
                     points: relBezPoints,
                     endPoint: relEndPoint,
                     bezB: relBezB
                 } = relBezierCoords(currentPos, rest, plotHeight, graph, numSamples)
                 currentPos = relEndPoint
+                // console.log({ type, currentPos })
                 lastBezier = relBezB || lastBezier
                 coordinates.push(...relBezPoints)
                 return
-            case 's bezier':
+            case 'relative s bezier':
                 const {
-                    points: sBezPoints,
-                    endPoint: sEndPoint,
-                    bezB: sBezB
-                } = sBezierCoords(currentPos, lastBezier, rest, plotHeight, graph, numSamples)
-                currentPos = sBezPoints[sBezPoints.length-1]
-                lastBezier = sBezB || lastBezier
-                coordinates.push(...sBezPoints)
+                    points: relSBezPoints,
+                    endPoint: relSEndPoint,
+                    bezB: relSBezB
+                } = relSBezierCoords(currentPos, lastBezier, rest, plotHeight, graph, numSamples)
+                currentPos = relSEndPoint
+                // console.log({ type, currentPos })
+                lastBezier = relSBezB || lastBezier
+                coordinates.push(...relSBezPoints)
+                return
+            case 'absolute s bezier':
+                const {
+                    points: absSBezPoints,
+                    endPoint: absSEndPoint,
+                    bezB: absSBezB
+                } = absSBezierCoords(currentPos, lastBezier, rest, plotHeight, graph, numSamples)
+                currentPos = absSEndPoint
+                // console.log({ type, currentPos })
+                lastBezier = absSBezB || lastBezier
+                coordinates.push(...absSBezPoints)
                 return
             case 'end':
-                coordinates.push(coordinates[0])
+                // coordinates.push(coordinates[0])
                 return
             default:
+              console.log('NEEDS LOGIC', { rule, type })
                 break
         }
     })
+    console.log({ coordinates })
+    return applyTransformations(coordinates, transforms)
+}
 
-    return coordinates
+function applyTransformations(coordinates, transformations) {
+  // console.log({ transformations })
+  if (!transformations) return coordinates
+  debugger
 }
 
 function stringToCoords(string, height) {
@@ -94,6 +161,15 @@ function invertY({ x, y }, height) {
 }
 
 function ruleToCoords(string) {
+    // console.log(string)
+    // if (string.indexOf(',') === -1 && string.indexOf('-') === -1) {
+    //   console.log("======================================");
+    //   // console.log(string.split('.'));
+    //   const splitByDecimalString = string.split('.')
+    //   const coords = [parseFloat(splitByDecimalString[0] + '.' + splitByDecimalString[1]), parseFloat('.' + splitByDecimalString[2])]
+    //   console.log({ coords })
+    //   console.log("======================================");
+    // }
     return string.replace(/-/g, ',-').split(',').filter(coord => coord !== '').map(coord => parseFloat(coord))
 }
 
@@ -115,7 +191,7 @@ function absBezierCoords(string, plotHeight, numSamples) {
 
 function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
     const [ handleAx, handleAy, handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
-
+    // debugger
     const bezA = new Point(currentPos.x + handleAx, currentPos.y + handleAy)
     const bezB = new Point(currentPos.x + handleBx, currentPos.y + handleBy)
     const endPoint = new Point(currentPos.x + finalx, currentPos.y + finaly)
@@ -129,11 +205,25 @@ function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
     }
 }
 
-function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSamples) {
+function relLineCoords(currentPos, string, plotHeight) {
+  const [x, y] = ruleToCoords(string)
+  // console.log(string, { x, y })
+  const point = { x: currentPos.x + x, y: currentPos.y + y}
+  return [ currentPos, point ]
+}
+
+function relHorizontalLineCoords(currentPos, string, plotHeight) {
+  const [x] = ruleToCoords(string)
+  return {
+    x: currentPos.x + x, y: plotHeight - currentPos.y
+  }
+}
+
+function relSBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSamples) {
     const [ handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
 
-    const newHandleBx = currentPos.x + (currentPos.x - lastBezier.x)
-    const newHandleBy = currentPos.y + (currentPos.y - lastBezier.y)
+    const newHandleBx = currentPos.x
+    const newHandleBy = currentPos.y
 
     const handleAx = currentPos.x
     const handleAy = currentPos.y
@@ -151,10 +241,40 @@ function sBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSam
     }
 }
 
+function absSBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSamples) {
+    const [ handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
+
+    const newHandleBx = lastBezier.x
+    const newHandleBy = lastBezier.y
+
+    const handleAx = currentPos.x
+    const handleAy = currentPos.y
+
+    const bezA = new Point(handleAx, handleAy)
+    const bezB = new Point(newHandleBx, newHandleBy)
+    const endPoint = new Point(finalx, finaly)
+
+    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
+
+    return {
+        points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
+        endPoint: { x: endPoint.x, y: endPoint.y },
+        bezB: { x: bezB.x, y: bezB.y }
+    }
+}
+
 function pathCoords(path, plotHeight, graph, numSamples) {
-    const instructions = path.match('d=((.|\n)*)')[1]
-    const rules = instructions.split(/(?=[A-Za-z])/)
-    return coordinatesFromRules(rules, plotHeight, graph, numSamples)
+    const [idProp, ] = path.match('id=\"((.|\n)*?\")') || []
+    const [classProp, ] = path.match('class=\"((.|\n)*?\")') || []
+
+    let instructions = path.replace(idProp, '').replace(classProp, '').match('d=((.|\n)*)')[1]
+    const transforms = instructions.match('transform=\"(.|\n)*\"')
+    transforms && transforms.forEach(transform => {
+      instructions = instructions.replace(transform, '')
+    })
+
+    const rules = instructions.replace('/>', '').split(/(?=[A-Za-z])/).filter(rule => rule !== '"')
+    return coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms)
 }
 
 function polygonCoords(polygon, plotHeight, numSamples, interpolate) {
@@ -204,7 +324,7 @@ function lineCoords(line, plotHeight, numSamples, interpolate) {
 }
 
 export function numPaths(svg) {
-    const paths = svg.match(/<(line|path|polygon)((.|\n)*)\/>/g)
+    const paths = svg.match(/<(line|path|polygon)((.|\n)*?)\/>/g)
     return paths ? paths.length : 0
 }
 
@@ -245,13 +365,16 @@ function findClosestList(lastPoint, lists) {
 
 
 export function parseSVG(options) {
-    const { svg, numSamples, minSamples, frameNum = 0, interpolate, graph } = options
-    const plotSize = svg.match('viewBox="((.|\n)*)" style')[1]
+    const { svg, numSamples, minSamples, frameNum = 0, interpolate, graph, paths } = options
+    const plotSize = svg.match('viewBox="((.|\n)*)">')[1]
     const plotWidth = parseFloat(plotSize.split(' ')[2])
     const plotHeight = parseFloat(plotSize.split(' ')[3])
-    const tags = svg.match(/<(line|path|polygon)((.|\n)*)\/>/g)
 
-    const coordinates = tags.map(tag => {
+    // console.log({ paths })
+
+    // console.log({ plotSize, plotWidth, plotHeight, paths })
+
+    const coordinates = paths.map(tag => {
         if (tag.match('path')) {
             return pathCoords(tag, plotHeight, graph, numSamples, interpolate)
         } else if (tag.match('polygon')) {

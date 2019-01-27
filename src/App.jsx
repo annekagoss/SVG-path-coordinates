@@ -43,15 +43,17 @@ class App extends Component {
       const promises = svgs.map((animFrame, i) => {
         return new Promise((resolve, reject) => {
           console.log('reading frame ', i+1)
-           const paths = numPaths(animFrame)
-           const samplesPerPath = INTERPOLATE_LINES ? Math.floor(totalSamples / paths) : samples
+          // debugger
+           const paths = animFrame.match(/<(line|path|polygon)((.|\n)*?)\/>/g)
+           const samplesPerPath = INTERPOLATE_LINES ? Math.floor(totalSamples / paths.length) : samples
            const options = {
              svg: animFrame,
              numSamples: samplesPerPath,
              minSamples: totalSamples,
              frameNum: i,
              interpolate: INTERPOLATE_LINES,
-             graph: this.state.graph
+             graph: this.state.graph,
+             paths
            }
            newFrames.push(parseSVG(options))
 
@@ -96,7 +98,7 @@ class App extends Component {
       }
 
       const animFrame = frames[this.count]
-      const bezierPoints = animFrame.coordinates.map(coord => (new Point(coord.x, animFrame.plotHeight - coord.y)))
+      const bezierPoints = animFrame.coordinates.filter(coord => !!coord).map(coord => (new Point(coord.x, animFrame.plotHeight - coord.y)))
       this.state.graph.clear()
       this.state.graph.drawCurveFromPoints(bezierPoints)
       this.count++

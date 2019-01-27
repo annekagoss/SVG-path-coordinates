@@ -6,7 +6,7 @@ function formatLineString(coords) {
 }
 
 function formatPathString(coords, frameNum) {
-    return coords.reduce((result, { x, y }, i) => {
+    return coords.filter(coord => !!coord).reduce((result, { x, y }, i) => {
         return result + (coords.length*frameNum+i) + ', ' + x + ' ' + y + ';\n'
     }, '')
 }
