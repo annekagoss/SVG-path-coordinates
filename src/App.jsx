@@ -43,9 +43,9 @@ class App extends Component {
       const promises = svgs.map((animFrame, i) => {
         return new Promise((resolve, reject) => {
           console.log('reading frame ', i+1)
-          // debugger
+
            const paths = animFrame.match(/<(line|path|polygon)((.|\n)*?)\/>/g)
-           const samplesPerPath = INTERPOLATE_LINES ? Math.floor(totalSamples / paths.length) : samples
+           const samplesPerPath = INTERPOLATE_LINES ? Math.floor(totalSamples / paths.length) : SAMPLES
            const options = {
              svg: animFrame,
              numSamples: samplesPerPath,
@@ -98,7 +98,7 @@ class App extends Component {
       }
 
       const animFrame = frames[this.count]
-      const bezierPoints = animFrame.coordinates.filter(coord => !!coord).map(coord => (new Point(coord.x, animFrame.plotHeight - coord.y)))
+      const bezierPoints = animFrame.coordinates.filter(coord => !!coord).map(coord => (new Point(coord.x, coord.y)))
       this.state.graph.clear()
       this.state.graph.drawCurveFromPoints(bezierPoints)
       this.count++
@@ -108,7 +108,6 @@ class App extends Component {
       FILE_CACHE = []
       const totalLength = files.length
       const promises = files.map(file => (this.readFile(file, totalLength)))
-      console.log({ promises })
 
       this.setState({
         loading: true,
@@ -118,12 +117,10 @@ class App extends Component {
       Promise.all(promises)
         .then(() => {
           FILE_CACHE.sort((a, b) => a.num - b.num)
-          // setTimeout(() => {
             this.setState({
               uploaded: true
             })
             this.loadFrames(FILE_CACHE.map(file => (file.data)))
-          // }, 0)
         })
   }
 
