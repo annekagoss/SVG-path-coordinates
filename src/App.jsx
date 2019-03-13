@@ -39,7 +39,6 @@ class App extends Component {
       const totalSamples = INTERPOLATE_LINES ? Math.max(...svgs.map(animFrame => (numPaths(animFrame)))) * SAMPLES : null
       const newFrames = []
 
-
       const promises = svgs.map((animFrame, i) => {
         return new Promise((resolve, reject) => {
           console.log('reading frame ', i+1)
@@ -98,7 +97,7 @@ class App extends Component {
       }
 
       const animFrame = frames[this.count]
-      const bezierPoints = animFrame.coordinates.filter(coord => !!coord).map(coord => (new Point(coord.x, coord.y)))
+      const bezierPoints = animFrame.coordinates.weightedCoords.filter(coord => !!coord).map(coord => (new Point(coord.x, coord.y, coord.weight)))
       this.state.graph.clear()
       this.state.graph.drawCurveFromPoints(bezierPoints)
       this.count++

@@ -3,7 +3,7 @@
 /* https://github.com/nashvail/BezierCurveGenerator */
 
 export class Point {
-    constructor(x = 0, y = 0) {
+    constructor(x = 0, y = 0, weight = 1) {
         this.x = x
                 /*
                         The reason to the following is because we
@@ -11,6 +11,7 @@ export class Point {
                         instead of the top left.
                 */
         this.y = y
+        this.weight = weight
     }
 
     x() {
@@ -26,7 +27,7 @@ export class Point {
             .getElementById('graph')
             .insertAdjacentHTML(
                 'beforeend',
-                `<circle cx="${this.x}" cy="${this.y}" r="5" fill="#000" />`,
+                `<circle cx="${this.x}" cy="${this.y}" r="5" fill="rgba(0, 0, 0, ${this.weight})" />`,
             )
     }
 }
@@ -119,7 +120,7 @@ export class Graph {
             'beforeend',
             `<line x1="${point1.x}" y1="${point1.y}" x2="${point2.x}" y2="${
                 point2.y
-            }" stroke="${color}" stroke-width="${stroke}" id="line"/>`,
+            }" stroke="${color}" stroke-width="${point1.weight}" id="line"/>`,
         )
     }
 

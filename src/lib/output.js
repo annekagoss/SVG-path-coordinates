@@ -1,12 +1,12 @@
 function formatLineString(coords) {
-    return coords.reduce((result, [start, finish], i) => {
+    return coords.uniformCoords.reduce((result, [start, finish], i) => {
         const row = i
         return result + i + ', ' + start + ' ' + finish + ';\n'
     }, '')
 }
 
 function formatPathString(coords, frameNum) {
-    return coords.filter(coord => !!coord).reduce((result, { x, y }, i) => {
+    return coords.uniformCoords.filter(coord => !!coord).reduce((result, { x, y }, i) => {
         return result + (coords.length*frameNum+i) + ', ' + x + ' ' + y + ';\n'
     }, '')
 }

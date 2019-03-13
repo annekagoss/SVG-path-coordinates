@@ -306,6 +306,14 @@ function extendCoords(coords, minSamples) {
     return coords.splice(0, minSamples)
 }
 
+function sortAllByVicinity(coords) {
+  const { uniformCoords, weightedCoords } = coords;
+  return {
+    uniformCoords: sortByVicinity(uniformCoords),
+    weightedCoords: sortByVicinity(weightedCoords)
+  }
+}
+
 function sortByVicinity(coordinates) {
     let toSort = coordinates.map((list, i) => ({ key: i, coordinates: list }))
     const keyedCoordinates = [...toSort]
@@ -333,24 +341,50 @@ function findClosestList(lastPoint, lists) {
     return weightedLists.sort((a,b) => (a.distance - b.distance))[0]
 }
 
+const getWeightForSample = (index, numSamples, totalSamples) => {
+  if (index < totalSamples - numSamples) return 1;
+  return 0;
+}
+
+const addWeight = (coords, numSamples) => {
+  if (!(coords && numSamples)) return []
+  console.log(coords, numSamples)
+  return coords.map((coord, i) => ({
+    ...coord,
+    weight: getWeightForSample(i, numSamples, coords.length)
+  }))
+}
 
 export function parseSVG(options) {
     const { svg, numSamples, minSamples, frameNum = 0, interpolate, graph, paths } = options
     const plotSize = svg.match('viewBox="((.|\n)*)">')[1]
     const plotWidth = parseFloat(plotSize.split(' ')[2])
     const plotHeight = parseFloat(plotSize.split(' ')[3])
+    const initialResult = {
+      uniformCoords: [],
+      weightedCoords: []
+    }
 
     const coordinates = paths.reduce((result, tag) => {
         if (tag.match('path')) {
-            result.push(pathCoords(tag, plotHeight, graph, numSamples, interpolate))
+            const coords = pathCoords(tag, plotHeight, graph, numSamples, interpolate)
+            result.uniformCoords.push(coords)
+            result.weightedCoords.push(addWeight(coords, numSamples))
+            return result
         } else if (tag.match('polygon')) {
-            result.push(polygonCoords(tag, plotHeight, numSamples, interpolate))
+            const coords = polygonCoords(tag, plotHeight, numSamples, interpolate)
+            result.uniformCoords.push(coords)
+            result.weightedCoords.push(addWeight(coords, numSamples))
+            return result
         } else {
-          result.push(lineCoords(tag, plotHeight, numSamples, interpolate))
+            const coords = lineCoords(tag, plotHeight, numSamples, interpolate)
+            result.uniformCoords.push(coords)
+            result.weightedCoords.push(addWeight(coords, numSamples))
+            return result
         }
-        return result
-    }, [])
 
-    const sortedCoordinates = sortByVicinity(coordinates)
+    }, initialResult)
+
+    const sortedCoordinates = sortAllByVicinity(coordinates)
     return { frameNum, coordinates: sortedCoordinates, plotWidth, plotHeight }
 }
