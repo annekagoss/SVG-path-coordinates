@@ -6,13 +6,20 @@ function formatLineString(coords) {
 }
 
 function formatPathString(coords, frameNum) {
-    return coords.uniformCoords.filter(coord => !!coord).reduce((result, { x, y }, i) => {
-        return result + (coords.length*frameNum+i) + ', ' + x + ' ' + y + ';\n'
+    return coords.filter(coord => !!coord).reduce((result, { x, y, weight }, i) => {
+        const weightString = weight ?
+          ', ' + weight + ';\n' :
+          ';\n';
+        return result + (coords.length*frameNum+i) + ', ' + x + ' ' + y + weightString;
     }, '')
 }
 
-export function makeTextFile(frames) {
-    const combinedText = frames.map((frame, i) => (formatPathString(frame.coordinates, i)))
+const getFrameCoords = (frame, useWeighted) => {
+  return useWeighted ? frame.coordinates.weightedCoords : frame.coordinates.uniformCoords;
+}
+
+export function makeTextFile(frames, useWeighted) {
+    const combinedText = frames.map((frame, i) => (formatPathString(getFrameCoords(frame, useWeighted), i)))
     const data = new Blob(combinedText, {type: 'text/plain'});
     return window.URL.createObjectURL(data);
 }

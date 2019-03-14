@@ -8,6 +8,7 @@ import { makeTextFile } from 'lib/output'
 import style from './styles.css'
 
 const INTERPOLATE_LINES = true
+const RENDER_WEIGHTS = true
 const SAMPLES = 200
 let FILE_CACHE = []
 
@@ -97,7 +98,8 @@ class App extends Component {
       }
 
       const animFrame = frames[this.count]
-      const bezierPoints = animFrame.coordinates.weightedCoords.filter(coord => !!coord).map(coord => (new Point(coord.x, coord.y, coord.weight)))
+      const beierCoords = RENDER_WEIGHTS ? animFrame.coordinates.weightedCoords : animFrame.coordinates.uniformCoords;
+      const bezierPoints = beierCoords.filter(coord => !!coord).map(coord => (new Point(coord.x, coord.y, coord.weight)))
       this.state.graph.clear()
       this.state.graph.drawCurveFromPoints(bezierPoints)
       this.count++
@@ -149,7 +151,8 @@ class App extends Component {
             { animFrames.length > 0 && (
               <div className={style.preview}>
                 <svg width={`${animFrames[0].plotWidth}px`} height={`${animFrames[0].plotHeight}px`} id='graph'></svg>
-                <a className={style.link} download={`frame_${0}.txt`} href={makeTextFile(animFrames)}>download coordinates</a>
+                <a className={style.link} download={`frame_${0}.txt`} href={makeTextFile(animFrames, false)}>download coordinates</a>
+                <a className={style.link} download={`frame_${0}_weighted.txt`} href={makeTextFile(animFrames, true)}>download weighted coordinates</a>
               </div>
             )}
 

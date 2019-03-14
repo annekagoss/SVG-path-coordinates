@@ -348,7 +348,6 @@ const getWeightForSample = (index, numSamples, totalSamples) => {
 
 const addWeight = (coords, numSamples) => {
   if (!(coords && numSamples)) return []
-  console.log(coords, numSamples)
   return coords.map((coord, i) => ({
     ...coord,
     weight: getWeightForSample(i, numSamples, coords.length)
