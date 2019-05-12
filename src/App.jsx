@@ -45,7 +45,7 @@ class App extends Component {
           console.log('reading frame ', i+1)
 
            const paths = animFrame.match(/<(line|path|polygon)((.|\n)*?)\/>/g)
-           const samplesPerPath = INTERPOLATE_LINES ? Math.floor(totalSamples / paths.length) : SAMPLES
+           const samplesPerPath = INTERPOLATE_LINES ? Math.ceil(totalSamples / (paths.length+1)) : SAMPLES
            const options = {
              svg: animFrame,
              numSamples: samplesPerPath,

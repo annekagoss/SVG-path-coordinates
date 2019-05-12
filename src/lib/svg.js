@@ -62,10 +62,7 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                   x: point.x,
                   y: point.y
                 }
-                coordinates.push({
-                  x: point.x,
-                  y: point.y
-                })
+                coordinates.push(currentPos)
                 return
             case 'relative line':
                 const relLinePoints = relLineCoords(currentPos, rest, plotHeight)
@@ -135,12 +132,14 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                 coordinates.push(...absSBezPoints)
                 return
             case 'end':
+                coordinates.push(currentPos)
                 return
             default:
               console.log('NEEDS LOGIC', { rule, type })
                 break
         }
     })
+    console.log(coordinates)
     return applyTransformations(coordinates, transforms)
 }
 
@@ -362,7 +361,8 @@ function findClosestList(lastPoint, lists) {
 }
 
 const getWeightForSample = (index, numSamples, totalSamples) => {
-  if (index < totalSamples - numSamples) return 1;
+    console.log({index, totalSamples, numSamples})
+  if (index < totalSamples) return 1;
   return 0;
 }
 
