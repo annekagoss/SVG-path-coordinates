@@ -88,7 +88,7 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                     points: absBezPoints,
                     bezB: absBezB,
                     endPoint: absEndPoint
-                } = absBezierCoords(rest, plotHeight, numSamples)
+                } = absBezierCoords(rest, plotHeight, numSamples, currentPos)
                 currentPos = absEndPoint
                 lastBezier = absBezB || lastBezier
                 coordinates.push(...absBezPoints)
@@ -152,14 +152,15 @@ function ruleToCoords(string) {
     return string.replace(/-/g, ',-').split(',').filter(coord => coord !== '').map(coord => parseFloat(coord))
 }
 
-function absBezierCoords(string, plotHeight, numSamples) {
+function absBezierCoords(string, plotHeight, numSamples, currentPos) {
     const [ handleAx, handleAy, handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
 
+    const startPoint = new Point(currentPos.x, currentPos.y);
     const bezA = new Point(handleAx, handleAy)
     const bezB = new Point(handleBx, handleBy)
     const endPoint = new Point(finalx, finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
+    const bezierCurve = new BezierCurve([ startPoint, bezA, bezB, endPoint ], plotHeight, numSamples)
 
     return {
         points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
@@ -208,11 +209,12 @@ function relSBezierCoords(currentPos, lastBezier, string, plotHeight, graph, num
     const handleAx = currentPos.x
     const handleAy = currentPos.y
 
+    const startPoint = new Point(currentPos.x, currentPos.y);
     const bezA = new Point(handleAx, handleAy)
     const bezB = new Point(newHandleBx, newHandleBy)
     const endPoint = new Point(currentPos.x + finalx, currentPos.y + finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
+    const bezierCurve = new BezierCurve([ startPoint, bezA, bezB, endPoint ], plotHeight, numSamples)
 
     return {
         points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
@@ -230,11 +232,12 @@ function absSBezierCoords(currentPos, lastBezier, string, plotHeight, graph, num
     const handleAx = currentPos.x
     const handleAy = currentPos.y
 
+    const startPoint = new Point(currentPos.x, currentPos.y);
     const bezA = new Point(handleAx, handleAy)
     const bezB = new Point(newHandleBx, newHandleBy)
     const endPoint = new Point(finalx, finaly)
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
+    const bezierCurve = new BezierCurve([ startPoint, bezA, bezB, endPoint ], plotHeight, numSamples)
 
     return {
         points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
@@ -352,7 +355,7 @@ function findClosestList(lastPoint, lists) {
 }
 
 const getWeightForSample = (index, numSamples, totalSamples) => {
-  if (index < totalSamples) return 1;
+  if (index < totalSamples - numSamples) return 1;
   return 0;
 }
 
