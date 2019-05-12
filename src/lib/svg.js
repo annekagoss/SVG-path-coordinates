@@ -42,8 +42,6 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
         const [ foo, rest ] = rule.split(first)
         const type = RULE_TYPES[first];
 
-        console.log({ type, rest })
-
         switch (type) {
             case 'start':
                 const startCoords = stringToCoords(rest)
@@ -101,12 +99,6 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                     endPoint: relEndPoint,
                     bezB: relBezB
                 } = relBezierCoords(currentPos, rest, plotHeight, graph, numSamples)
-                console.log('=============================')
-                console.log({
-                    relEndPoint,
-                    relBezPoints
-                })
-                console.log('=============================')
                 currentPos = relEndPoint
                 lastBezier = relBezB || lastBezier
                 coordinates.push(...relBezPoints)
@@ -139,7 +131,6 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                 break
         }
     })
-    console.log(coordinates)
     return applyTransformations(coordinates, transforms)
 }
 
@@ -179,11 +170,14 @@ function absBezierCoords(string, plotHeight, numSamples) {
 
 function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
     const [ handleAx, handleAy, handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
+    console.log({string, handleAx, handleAy, handleBx, handleBy, finalx, finaly})
+    const startPoint = new Point(currentPos.x, currentPos.y);
     const bezA = new Point(currentPos.x + handleAx, currentPos.y + handleAy)
     const bezB = new Point(currentPos.x + handleBx, currentPos.y + handleBy)
     const endPoint = new Point(currentPos.x + finalx, currentPos.y + finaly)
+    console.log({currentPos, bezA, bezB, endPoint})
 
-    const bezierCurve = new BezierCurve([ bezA, bezB, endPoint ], plotHeight, numSamples)
+    const bezierCurve = new BezierCurve([ startPoint, bezA, bezB, endPoint ], plotHeight, numSamples)
 
     return {
         points: bezierCurve.drawingPoints.map(point => ({ x: point.x, y: point.y })),
@@ -195,9 +189,6 @@ function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
 function relLineCoords(currentPos, string, plotHeight) {
   const [x, y] = ruleToCoords(string)
   const point = { x: currentPos.x + x, y: currentPos.y + y}
-
-  console.log({currentPos, x, y, point})
-
   return [ currentPos, point ]
 }
 
@@ -361,7 +352,6 @@ function findClosestList(lastPoint, lists) {
 }
 
 const getWeightForSample = (index, numSamples, totalSamples) => {
-    console.log({index, totalSamples, numSamples})
   if (index < totalSamples) return 1;
   return 0;
 }
