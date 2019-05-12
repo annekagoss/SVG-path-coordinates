@@ -14,15 +14,16 @@ import {
 } from './bezier.js'
 
 const RULE_TYPES = {
-    'M': 'start',
-    'C': 'absolute bezier',
-    'c': 'relative bezier',
-    's': 'relative s bezier',
-    'S': 'absolute s bezier',
-    'L': 'absolute line',
-    'l': 'relative line',
-    'h': 'relative horizontal line',
-    'z': 'end'
+    M: 'start',
+    C: 'absolute bezier',
+    c: 'relative bezier',
+    s: 'relative s bezier',
+    S: 'absolute s bezier',
+    L: 'absolute line',
+    l: 'relative line',
+    H: 'absolute horizontal line',
+    h: 'relative horizontal line',
+    z: 'end'
 }
 
 function matchCoord(line, first, last) {
@@ -41,6 +42,8 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
         const [ foo, rest ] = rule.split(first)
         const type = RULE_TYPES[first];
 
+        console.log({ type, rest })
+
         switch (type) {
             case 'start':
                 const startCoords = stringToCoords(rest)
@@ -50,7 +53,7 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                 }
                 coordinates.push({
                   x: startCoords.x,
-                  y: plotHeight - startCoords.y
+                  y: startCoords.y
                 })
                 return
             case 'absolute line':
@@ -61,19 +64,27 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                 }
                 coordinates.push({
                   x: point.x,
-                  y: plotHeight - point.y
+                  y: point.y
                 })
                 return
             case 'relative line':
                 const relLinePoints = relLineCoords(currentPos, rest, plotHeight)
                 currentPos = relLinePoints[1]
-                coordinates.concat(relLinePoints)
+                coordinates.push(currentPos)
+                return
+            case 'absolute horizontal line':
+                const absHX = parseFloat(rest);
+                currentPos = {
+                    x: absHX,
+                    y: currentPos.y
+                }
+                coordinates.push(currentPos);
                 return
             case 'relative horizontal line':
                 const { x, y } = relHorizontalLineCoords(currentPos, rest, plotHeight)
                 currentPos = {
                   x,
-                  y: plotHeight - y
+                  y
                 }
                 coordinates.push({ x, y })
                 return
@@ -93,6 +104,12 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                     endPoint: relEndPoint,
                     bezB: relBezB
                 } = relBezierCoords(currentPos, rest, plotHeight, graph, numSamples)
+                console.log('=============================')
+                console.log({
+                    relEndPoint,
+                    relBezPoints
+                })
+                console.log('=============================')
                 currentPos = relEndPoint
                 lastBezier = relBezB || lastBezier
                 coordinates.push(...relBezPoints)
@@ -179,13 +196,16 @@ function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
 function relLineCoords(currentPos, string, plotHeight) {
   const [x, y] = ruleToCoords(string)
   const point = { x: currentPos.x + x, y: currentPos.y + y}
+
+  console.log({currentPos, x, y, point})
+
   return [ currentPos, point ]
 }
 
 function relHorizontalLineCoords(currentPos, string, plotHeight) {
   const [x] = ruleToCoords(string)
   return {
-    x: currentPos.x + x, y: plotHeight - currentPos.y
+    x: currentPos.x + x, y: currentPos.y
   }
 }
 
@@ -273,9 +293,9 @@ function polygonCoords(polygon, plotHeight, numSamples, interpolate) {
 
 function lineCoords(line, plotHeight, numSamples, interpolate) {
     const x1 = matchCoord(line, 'x1', 'y1')
-    const y1 = plotHeight - matchCoord(line, 'y1', 'x2')
+    const y1 = matchCoord(line, 'y1', 'x2')
     const x2 = matchCoord(line, 'x2', 'y2')
-    const y2 = plotHeight - matchCoord(line, 'y2', '/')
+    const y2 = matchCoord(line, 'y2', '/')
 
     const startPoint = { x: x1, y: y1 }
     const endPoint = { x: x2, y: y2 }

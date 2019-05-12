@@ -87,7 +87,7 @@ export class BezierCurve {
             y += bin * this.points[i].y
         }
 
-        return new Point(x, this.plotHeight - y)
+        return new Point(x, y)
     }
 }
 
