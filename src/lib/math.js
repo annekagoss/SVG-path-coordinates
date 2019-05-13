@@ -31,3 +31,10 @@ export function vectorLength({ x, y}) {
 export function vectorDistance(a, b) {
     return vectorLength(subtractVectors(a, b))
 }
+
+export function lerpPoints(a, b, t) {
+    return {
+        x: (a.x * (1-t)) + b.x*t,
+        y: (a.y * (1-t)) + b.y*t
+    }
+}

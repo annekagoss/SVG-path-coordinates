@@ -1,4 +1,5 @@
 import {
+  lerpPoints,
   lerpVectors,
   scaleVector,
   addVectors,
@@ -34,13 +35,15 @@ function matchCoord(line, first, last) {
 function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) {
     let currentPos = { x: null, y: null }
     let lastBezier = null
-    const coordinates = []
+    let coordinates = []
 
     rules.forEach(rule => {
         if (rule.length < 3) return
         const first = rule[0]
         const [ foo, rest ] = rule.split(first)
         const type = RULE_TYPES[first];
+
+        console.log(type)
 
         switch (type) {
             case 'start':
@@ -55,33 +58,24 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                 })
                 return
             case 'absolute line':
-                const point = stringToCoords(rest)
-                currentPos = {
-                  x: point.x,
-                  y: point.y
-                }
-                coordinates.push(currentPos)
+                const absLinePoints = absLineCoords(currentPos, rest, numSamples);
+                currentPos = absLinePoints[absLinePoints.length-1]
+                coordinates = coordinates.concat(absLinePoints)
                 return
             case 'relative line':
-                const relLinePoints = relLineCoords(currentPos, rest, plotHeight)
-                currentPos = relLinePoints[1]
-                coordinates.push(currentPos)
+                const relLinePoints = relLineCoords(currentPos, rest, numSamples)
+                currentPos = relLinePoints[relLinePoints.length-1]
+                coordinates = coordinates.concat(relLinePoints)
                 return
             case 'absolute horizontal line':
-                const absHX = parseFloat(rest);
-                currentPos = {
-                    x: absHX,
-                    y: currentPos.y
-                }
-                coordinates.push(currentPos);
+                const absHLinePoints = absHorizontalLineCoords(currentPos, rest, numSamples);
+                currentPos = absHLinePoints[absHLinePoints.length-1]
+                coordinates = coordinates.concat(absHLinePoints)
                 return
             case 'relative horizontal line':
-                const { x, y } = relHorizontalLineCoords(currentPos, rest, plotHeight)
-                currentPos = {
-                  x,
-                  y
-                }
-                coordinates.push({ x, y })
+                const relHLinePoints = relHorizontalLineCoords(currentPos, rest, numSamples)
+                currentPos = relHLinePoints[relHLinePoints.length-1]
+                coordinates = coordinates.concat(relHLinePoints)
                 return
             case 'absolute bezier':
                 const {
@@ -152,6 +146,29 @@ function ruleToCoords(string) {
     return string.replace(/-/g, ',-').split(',').filter(coord => coord !== '').map(coord => parseFloat(coord))
 }
 
+function interpolatePoints(start, end, numSamples) {
+    const interpolatedPoints = []
+    for (let i = 0; i < numSamples; i++) {
+        const t = (i / numSamples)
+        interpolatedPoints.push(lerpPoints(start, end, t))
+    }
+
+    return interpolatedPoints
+}
+
+function absLineCoords(currentPos, string, numSamples) {
+    const endPoint = stringToCoords(string);
+    return interpolatePoints(currentPos, endPoint, numSamples);
+}
+
+function absHorizontalLineCoords(currentPos, string, numSamples) {
+    const endPoint = {
+        x: parseFloat(string),
+        y: currentPos.y
+    }
+    return interpolatePoints(currentPos, endPoint, numSamples);
+}
+
 function absBezierCoords(string, plotHeight, numSamples, currentPos) {
     const [ handleAx, handleAy, handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
 
@@ -171,12 +188,10 @@ function absBezierCoords(string, plotHeight, numSamples, currentPos) {
 
 function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
     const [ handleAx, handleAy, handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
-    console.log({string, handleAx, handleAy, handleBx, handleBy, finalx, finaly})
     const startPoint = new Point(currentPos.x, currentPos.y);
     const bezA = new Point(currentPos.x + handleAx, currentPos.y + handleAy)
     const bezB = new Point(currentPos.x + handleBx, currentPos.y + handleBy)
     const endPoint = new Point(currentPos.x + finalx, currentPos.y + finaly)
-    console.log({currentPos, bezA, bezB, endPoint})
 
     const bezierCurve = new BezierCurve([ startPoint, bezA, bezB, endPoint ], plotHeight, numSamples)
 
@@ -187,17 +202,19 @@ function relBezierCoords(currentPos, string, plotHeight, graph, numSamples) {
     }
 }
 
-function relLineCoords(currentPos, string, plotHeight) {
+function relLineCoords(currentPos, string, numSamples) {
   const [x, y] = ruleToCoords(string)
-  const point = { x: currentPos.x + x, y: currentPos.y + y}
-  return [ currentPos, point ]
+  const endPoint = { x: currentPos.x + x, y: currentPos.y + y}
+  return interpolatePoints(currentPos, endPoint, numSamples);
 }
 
-function relHorizontalLineCoords(currentPos, string, plotHeight) {
+function relHorizontalLineCoords(currentPos, string, numSamples) {
   const [x] = ruleToCoords(string)
-  return {
-    x: currentPos.x + x, y: currentPos.y
+  const endPoint = {
+    x: currentPos.x + x, 
+    y: currentPos.y
   }
+  return interpolatePoints(currentPos, endPoint, numSamples);
 }
 
 function relSBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSamples) {
@@ -297,13 +314,14 @@ function lineCoords(line, plotHeight, numSamples, interpolate) {
         return [ startPoint, endPoint ]
     }
 
-    const interpolatedPoints = []
-    for (let i = 0; i < numSamples; i++) {
-        const t = 1 - (i / numSamples)
-        interpolatedPoints.push(lerpVectors(startPoint, endPoint, t))
-    }
+    // const interpolatedPoints = []
+    // for (let i = 0; i < numSamples; i++) {
+    //     const t = 1 - (i / numSamples)
+    //     interpolatedPoints.push(lerpVectors(startPoint, endPoint, t))
+    // }
 
-    return interpolatedPoints
+    // return interpolatedPoints
+    return interpolatePoints(startPoint, endPoint, numSamples);
 }
 
 export function numPaths(svg) {
