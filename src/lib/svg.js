@@ -24,6 +24,7 @@ const RULE_TYPES = {
     l: 'relative line',
     H: 'absolute horizontal line',
     h: 'relative horizontal line',
+    V: 'absolute vertical line',
     z: 'end'
 }
 
@@ -42,8 +43,6 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
         const first = rule[0]
         const [ foo, rest ] = rule.split(first)
         const type = RULE_TYPES[first];
-
-        console.log(type)
 
         switch (type) {
             case 'start':
@@ -76,6 +75,11 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                 const relHLinePoints = relHorizontalLineCoords(currentPos, rest, numSamples)
                 currentPos = relHLinePoints[relHLinePoints.length-1]
                 coordinates = coordinates.concat(relHLinePoints)
+                return
+            case 'absolute vertical line':
+                const absVLinePoints = absVerticalLineCoords(currentPos, rest, numSamples);
+                currentPos = absVLinePoints[absVLinePoints.length-1]
+                coordinates = coordinates.concat(absVLinePoints)
                 return
             case 'absolute bezier':
                 const {
@@ -165,6 +169,14 @@ function absHorizontalLineCoords(currentPos, string, numSamples) {
     const endPoint = {
         x: parseFloat(string),
         y: currentPos.y
+    }
+    return interpolatePoints(currentPos, endPoint, numSamples);
+}
+
+function absVerticalLineCoords(currentPos, string, numSamples) {
+    const endPoint = {
+        x: currentPos.x,
+        y: parseFloat(string)
     }
     return interpolatePoints(currentPos, endPoint, numSamples);
 }
@@ -413,7 +425,9 @@ export function parseSVG(options) {
             return result
         }
 
-    }, initialResult)
+    }, initialResult);
+
+    console.log({ coordinates })
 
     const sortedCoordinates = sortAllByVicinity(coordinates)
     return { frameNum, coordinates: sortedCoordinates, plotWidth, plotHeight }
