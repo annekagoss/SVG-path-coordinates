@@ -14,6 +14,7 @@
   "root": true,
   "rules": {
     "indent": ["error", 2],
+    "object-curly-newline": ["never"],
     "react/prefer-stateless-function": "warn",
     "react/self-closing-comp": [
       "warn",

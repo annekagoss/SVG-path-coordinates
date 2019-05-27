@@ -45,8 +45,6 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
         const [foo, rest] = rule.split(first)
         const type = RULE_TYPES[first];
 
-        console.log({ type })
-
         switch (type) {
             case 'start':
                 const startCoords = stringToCoords(rest)
@@ -307,9 +305,7 @@ function pathCoords(path, plotHeight, graph, numSamples) {
 }
 
 function polygonCoords(polygon, plotHeight, numSamples, interpolate) {
-    const points = polygon.match('points=((.|\n)*)')[1].split(' ').map(point => point.split(',').map(coord => {
-            return parseFloat(coord.replace(/"/g, ''))
-        })).filter(point => point.length === 2).map(point => ({ x: point[0], y: point[1] }))
+    const points = polygon.match('points=((.|\n)*)')[1].split(' ').map(point => point.split(',').map(coord => parseFloat(coord.replace(/"/g, '')))).filter(point => point.length === 2).map(point => ({ x: point[0], y: point[1] }))
     const closedPoints = [...points, points[0]]
 
     if (!interpolate) return closedPoints
@@ -349,6 +345,22 @@ function lineCoords(line, plotHeight, numSamples, interpolate) {
 
     // return interpolatedPoints
     return interpolatePoints(startPoint, endPoint, numSamples);
+}
+
+function circleCoords(circle, numSamples = 20) {
+    const cx = matchCoord(circle, 'cx', 'cy');
+    const cy = matchCoord(circle, 'cy', 'r');
+    const radius = matchCoord(circle, 'r', '/');
+    const points = [];
+
+    for (let i = 0; i < numSamples; i++) {
+        const phase = (i / numSamples) * 2 * 3.14159265359;
+        const x = radius * Math.cos(phase) + cx;
+        const y = radius * Math.sin(phase) + cy;
+        points.push({ x, y });
+    }
+
+    return points;
 }
 
 export function numPaths(svg) {
@@ -414,7 +426,7 @@ const addWeight = (coords, numSamples) => {
 
 export function parseSVG(options) {
     const {
- svg, numSamples, minSamples, frameNum = 0, interpolate, graph, paths 
+ svg, numSamples, minSamples, frameNum = 0, interpolate, graph, paths,
 } = options
     const plotSize = svg.match('viewBox="((.|\n)*)">')[1]
     const plotWidth = parseFloat(plotSize.split(' ')[2])
@@ -435,19 +447,26 @@ export function parseSVG(options) {
             result.uniformCoords.push(coords)
             result.weightedCoords.push(addWeight(coords, numSamples))
             return result
-        } else {
+        } if (tag.match('circle')) {
+            const coords = circleCoords(tag, numSamples, interpolate);
+            if (!coords.length) return result;
+            result.uniformCoords.push(coords)
+            result.weightedCoords.push(addWeight(coords, numSamples))
+            return result;
+        }
             const coords = lineCoords(tag, plotHeight, numSamples, interpolate)
             result.uniformCoords.push(coords)
             result.weightedCoords.push(addWeight(coords, numSamples))
             return result
-        }
-
     }, initialResult);
 
     console.log({ coordinates })
 
     const sortedCoordinates = sortAllByVicinity(coordinates)
     return {
- frameNum, coordinates: sortedCoordinates, plotWidth, plotHeight 
-}
+        frameNum,
+        coordinates: sortedCoordinates,
+        plotWidth,
+        plotHeight,
+    };
 }

@@ -44,7 +44,11 @@ class App extends Component {
         return new Promise((resolve, reject) => {
           console.log('reading frame ', i+1)
 
-           const paths = animFrame.match(/<(line|path|polygon|polyline)((.|\n)*?)\/>/g)
+           const paths = animFrame.match(/<(line|path|polygon|polyline|circle)((.|\n)*?)\/>/g);
+           if (!paths) {
+             console.error('path not found', animFrame);
+             return;
+           }
            const samplesPerPath = INTERPOLATE_LINES ? Math.ceil(totalSamples / paths.length) : 1
            const options = {
              svg: animFrame,
