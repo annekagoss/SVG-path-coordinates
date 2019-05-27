@@ -25,6 +25,7 @@ const RULE_TYPES = {
     H: 'absolute horizontal line',
     h: 'relative horizontal line',
     V: 'absolute vertical line',
+    v: 'relative vertical line',
     z: 'end'
 }
 
@@ -80,6 +81,11 @@ function coordinatesFromRules(rules, plotHeight, graph, numSamples, transforms) 
                 const absVLinePoints = absVerticalLineCoords(currentPos, rest, numSamples);
                 currentPos = absVLinePoints[absVLinePoints.length-1]
                 coordinates = coordinates.concat(absVLinePoints)
+                return
+            case 'relative vertical line':
+                const relVLinePoints = relVerticalLineCoords(currentPos, rest, numSamples)
+                currentPos = relVLinePoints[relVLinePoints.length-1]
+                coordinates = coordinates.concat(relVLinePoints)
                 return
             case 'absolute bezier':
                 const {
@@ -228,6 +234,15 @@ function relHorizontalLineCoords(currentPos, string, numSamples) {
   }
   return interpolatePoints(currentPos, endPoint, numSamples);
 }
+
+function relVerticalLineCoords(currentPos, string, numSamples) {
+    const [y] = ruleToCoords(string)
+    const endPoint = {
+      x: currentPos.x, 
+      y: currentPos.y + y
+    }
+    return interpolatePoints(currentPos, endPoint, numSamples);
+  }
 
 function relSBezierCoords(currentPos, lastBezier, string, plotHeight, graph, numSamples) {
     const [ handleBx, handleBy, finalx, finaly ] = ruleToCoords(string)
