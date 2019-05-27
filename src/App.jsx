@@ -9,7 +9,7 @@ import style from './styles.css'
 
 const INTERPOLATE_LINES = true
 const RENDER_WEIGHTS = false
-const SAMPLES = 40
+const SAMPLES = 200
 let FILE_CACHE = []
 
 class App extends Component {
@@ -44,7 +44,7 @@ class App extends Component {
         return new Promise((resolve, reject) => {
           console.log('reading frame ', i+1)
 
-           const paths = animFrame.match(/<(line|path|polygon)((.|\n)*?)\/>/g)
+           const paths = animFrame.match(/<(line|path|polygon|polyline)((.|\n)*?)\/>/g)
            const samplesPerPath = INTERPOLATE_LINES ? Math.ceil(totalSamples / paths.length) : 1
            const options = {
              svg: animFrame,
