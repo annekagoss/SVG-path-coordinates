@@ -9,7 +9,7 @@ import style from './styles.css'
 
 const INTERPOLATE_LINES = true
 const RENDER_WEIGHTS = false
-const SAMPLES = 200
+const SAMPLES = 2
 let FILE_CACHE = []
 
 class App extends Component {

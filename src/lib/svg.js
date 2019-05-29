@@ -399,7 +399,7 @@ function sortByVicinity(coordinates) {
         toSort = toSort.filter(list => (list.key !== closestList.key))
     })
 
-    return [...sorted, ...toSort].map(item => (item.coordinates)).flat()
+    return [...sorted].map(item => (item.coordinates)).flat()
 }
 
 function findClosestList(lastPoint, lists) {
@@ -436,6 +436,8 @@ export function parseSVG(options) {
       weightedCoords: [],
     }
 
+    console.log({ paths })
+
     const coordinates = paths.reduce((result, tag) => {
         if (tag.match('path')) {
             const coords = pathCoords(tag, plotHeight, graph, numSamples, interpolate)
@@ -454,15 +456,15 @@ export function parseSVG(options) {
             result.weightedCoords.push(addWeight(coords, numSamples))
             return result;
         }
-            const coords = lineCoords(tag, plotHeight, numSamples, interpolate)
-            result.uniformCoords.push(coords)
-            result.weightedCoords.push(addWeight(coords, numSamples))
-            return result
+        const coords = lineCoords(tag, plotHeight, numSamples, interpolate)
+        result.uniformCoords.push(coords)
+        result.weightedCoords.push(addWeight(coords, numSamples))
+        return result;
     }, initialResult);
 
-    console.log({ coordinates })
-
     const sortedCoordinates = sortAllByVicinity(coordinates)
+    console.log({ coordinates, sortedCoordinates })
+
     return {
         frameNum,
         coordinates: sortedCoordinates,
